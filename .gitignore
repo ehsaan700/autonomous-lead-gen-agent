@@ -1,0 +1,11 @@
+# Environments
+.env
+venv/
+__pycache__/
+
+# Output and Log Files
+*.csv
+*.txt
+
+# Playwright/Browser artifacts
+.playwright/
