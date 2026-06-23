@@ -1,11 +1,11 @@
 
-# 🤖 Autonomous B2B Lead Generation Agent
+# Autonomous B2B Lead Generation Agent
 
 An enterprise-grade, fully autonomous AI agent that leverages LLM reasoning to dynamically formulate search strategies, asynchronously scrape the web, and extract validated B2B contact data.
 
 Unlike traditional linear scrapers, this system utilizes a highly concurrent Orchestrator to manage worker threads, bypass anti-bot protections, and guarantee data quality.
 
-## 🌟 Core Architecture
+## Core Architecture
 
 -   **The Cognitive Layer (ReAct Loop):** Driven by an LLM (via OpenRouter), the agent dynamically calculates lead deficits and generates hyper-targeted Boolean search queries (e.g., `intitle:"PR agency" "Dallas" "press release"`).
     
@@ -18,7 +18,7 @@ Unlike traditional linear scrapers, this system utilizes a highly concurrent Orc
 -   **The Gigabrain Parser:** Utilizes custom Regex, BeautifulSoup, and JSON-LD schema parsing to extract emails and E.164 compliant phone numbers. Features built-in obfuscated email decryption (XOR bypass) and aggressive dummy-data filtering.
     
 
-## 🚀 Execution Flow
+## Execution Flow
 
 1.  **Initialization:** The Orchestrator accepts a natural language prompt via the CLI, calculates the target deficit, and queries the LLM for a search strategy.
     
@@ -31,7 +31,7 @@ Unlike traditional linear scrapers, this system utilizes a highly concurrent Orc
 5.  **Graceful Shutdown:** The moment the exact target count is reached, a global kill switch is flipped, active headless browsers are safely terminated, and data is exported to a clean CSV.
     
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 -   **Language:** Python 3.10+
     
@@ -44,7 +44,7 @@ Unlike traditional linear scrapers, this system utilizes a highly concurrent Orc
 -   **LLM Integration:** OpenRouter API (Compatible with Llama 3, Claude, GPT-4, etc.)
     
 
-## ⚙️ Setup & Installation
+## Setup & Installation
 
 1.  Clone the repository:
     
