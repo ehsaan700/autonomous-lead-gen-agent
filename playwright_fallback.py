@@ -33,10 +33,12 @@ async def fetch_html_deep(url: str) -> str | None:
             
             await page.route("**/*", route_intercept)
 
-            # PHASE 3: Navigation
-            #print(f"  [Playwright] Navigating and waiting for JS to execute...")
-            # networkidle waits until there are no network connections for at least 500ms
-            await page.goto(url, wait_until="networkidle", timeout=20000)
+            # 🚀 PHASE 3: Navigation (Optimized)
+            # Wait for 'load' (scripts downloaded) instead of 'networkidle' (which hangs)
+            await page.goto(url, wait_until="load", timeout=15000)
+            
+            # Explicitly wait 1.5 seconds for React/Vue SPA DOM hydration
+            await page.wait_for_timeout(1500)
             
             # PHASE 4: Extraction
             html = await page.content()

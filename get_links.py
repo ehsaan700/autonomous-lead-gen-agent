@@ -3,21 +3,33 @@ import sys
 import os
 import asyncio
 
-# 1. Graceful Import Handling
 try:
     from ddgs import DDGS
 except ImportError:
-    #print("CRITICAL: duckduckgo_search is missing. Run: pip install duckduckgo-search")
+    print("CRITICAL: duckduckgo_search is missing. Run: pip install duckduckgo-search")
     sys.exit(1)
 
-# The core exclusion list
 EXCLUDED_KEYWORDS = [
     "facebook", "instagram", "linkedin", "telegram", "t.me", 
     "whatsapp", "tiktok", "yelp", "clutch", "reddit", "twitter", "x.com",
     "upcity", "sortlist", "themanifest", "designrush", "g2", "goodfirms",
     "expertise", "crunchbase", "glassdoor", "ziprecruiter", "indeed",
     "50pros", "semfirms", "kokoquest", "directory", "bizjournals", 
-    "google", "youtube"
+    "google", "youtube", "zoominfo", "yellowpages", "quora", "medium", 
+    "blogspot", "wordpress", "coursera", "udemy", "skillshare", 
+    "tripadvisor", "foursquare", "trustpilot", "capterra", "g2crowd",
+    "einnews", "fortunebusinessinsights", "prnewswire", "globenewswire", 
+    "businesswire", "bloomberg", "forbes", "researchandmarkets"
+]
+
+# 🛑 MASSIVELY EXPANDED B2C & MEDIA PATH BLOCKER
+EXCLUDED_PATHS = [
+    "/blog", "/blogs", "/post", "/posts", "/article", "/articles", 
+    "/news", "/resources", "/guide", "/guides", "/training", "/course", 
+    "/courses", "/webinar", "/events", "/academy", "/knowledge-base", 
+    "/faq", "/docs", "/listicle", "/top-10", "/best-", "/directory", 
+    "/companies", "/suppliers", "/listings", "/insights", "/reports", "/press-release",
+    "/forum", "/thread", "/podcast", "/jobs", "/careers", "/resume", "/marketplace", "/listing"
 ]
 
 def get_unique_filename(filepath: str) -> str:
@@ -31,11 +43,24 @@ def get_unique_filename(filepath: str) -> str:
             return new_filepath
         counter += 1
 
-# ==========================================
-# PHASE 4 ASYNC INTEGRATION
-# ==========================================
+def score_url_priority(url: str) -> int:
+    url_lower = url.lower()
+    parsed = urllib.parse.urlparse(url_lower)
+    path = parsed.path
+    score = 0
+    
+    if path in ["", "/"]:
+        score -= 10
+    elif "contact" in path or "about" in path:
+        score -= 5
+        
+    directories = ["yelp", "clutch", "zoominfo", "yellowpages", "crunchbase", "bbb.org", "mapquest", "capterra"]
+    if any(d in parsed.netloc for d in directories):
+        score += 50
+        
+    return score
+
 def _blocking_fetch(search_query: str, max_results: int) -> list[str]:
-    """Underlying blocking function that actually runs DDGS."""
     results = DDGS().text(search_query, max_results=max_results)
     valid_urls = []
     
@@ -44,44 +69,39 @@ def _blocking_fetch(search_query: str, max_results: int) -> list[str]:
         
     for item in results:
         url = item.get("href", "")
-        if not url:
+        if not url or url.lower().endswith((".pdf", ".doc", ".docx", ".xls", ".xlsx")):
             continue
             
-        domain = urllib.parse.urlparse(url).netloc.lower()
-        is_excluded = any(bad_word in domain for bad_word in EXCLUDED_KEYWORDS)
+        url_lower = url.lower()
+        domain = urllib.parse.urlparse(url_lower).netloc
         
-        if not is_excluded:
+        is_excluded_domain = any(bad_word in domain for bad_word in EXCLUDED_KEYWORDS)
+        is_informational_path = any(bad_path in url_lower for bad_path in EXCLUDED_PATHS)
+        is_invalid_tld = domain.endswith((".gov", ".edu"))
+        
+        if not is_excluded_domain and not is_informational_path and not is_invalid_tld:
             valid_urls.append(url)
             
+    valid_urls.sort(key=score_url_priority)
     return valid_urls
 
 async def fetch_urls(search_query: str, max_results: int = 50) -> list[str]:
-    """
-    Phase 4 hook: Runs the blocking DDGS search in a background thread 
-    so it doesn't freeze our massive async worker fleet. Returns raw URLs.
-    """
-    #print(f"[*] Fetching URLs for: '{search_query}'")
+    print(f"[*] Fetching URLs for: '{search_query}'")
     try:
-        # asyncio.to_thread pushes the blocking network call to a background thread
         return await asyncio.to_thread(_blocking_fetch, search_query, max_results)
     except Exception as e:
-        #print(f"⚠️ Search failed for '{search_query}': {e}")
+        print(f"⚠️ Search failed for '{search_query}': {e}")
         return []
 
-# ==========================================
-# PHASE 1 LEGACY (Standalone)
-# ==========================================
 def tool_harvester(search_query: str, max_results: int = 50, output_filepath: str = "target_urls.txt") -> str:
-    """Legacy function for standalone execution."""
-    #print(f"[*] Running Harvester Tool for query: '{search_query}'")
-    
+    print(f"[*] Running Harvester Tool for query: '{search_query}'")
     try:
         valid_urls = _blocking_fetch(search_query, max_results)
     except Exception as e:
         return f"Search execution failed due to network/API error: {str(e)}"
     
     if not valid_urls:
-        return "Search returned 0 valid results. Agent should try a different query."
+        return "Search returned 0 valid results."
 
     safe_output_filepath = get_unique_filename(output_filepath)
     try:
@@ -95,9 +115,9 @@ def tool_harvester(search_query: str, max_results: int = 50, output_filepath: st
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        #print("Error: Missing search query. Usage: python get_links.py 'search query' [max_results]")
+        print("Error: Missing search query. Usage: python get_links.py 'search query' [max_results]")
         sys.exit(1)
         
     query = sys.argv[1]
     max_results = int(sys.argv[2]) if len(sys.argv) >= 3 else 50
-    #print(tool_harvester(query, max_results))
+    print(tool_harvester(query, max_results))
